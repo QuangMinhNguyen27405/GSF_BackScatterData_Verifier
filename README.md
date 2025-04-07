@@ -25,8 +25,8 @@ This repository contains a program written in C that scans `.gsf` (Generic Senso
 
 1. **Clone the Repository**
    ```bash
-   git clone https://github.com/FREAC/BackScatter_Haeder_Data.git
-   cd BackScatter_Haeder_Data
+   git clone https://github.com/FREAC/GSF_BackScatterData_Verifier.git
+   cd GSF_BackScatterData_Verifier
    ```
 
 2. **Install Dependencies**
