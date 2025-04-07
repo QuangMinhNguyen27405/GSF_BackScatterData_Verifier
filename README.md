@@ -31,41 +31,46 @@ This repository contains a program written in C that scans `.gsf` (Generic Senso
 
 ## Setup
 
- 1. **Clone the Repository**
+1. **Clone the Repository**
    ```bash
    git clone https://github.com/FREAC/BackScatter_Haeder_Data.git
    cd BackScatter_Haeder_Data
-## Install Dependencies
+   ```
 
-Follow the instructions in the [Requirements](#requirements) section.
+2. **Install Dependencies**
 
-## Open in VS Code
+   Follow the instructions in the [Requirements](#requirements) section.
 
-Open the repository folder in VS Code.
+3. **Open in VS Code**
+
+   Open the repository folder in VS Code.
 
 ## Usage
 
-### Create a New Folder for Your Project
+1. **Create a New Folder for Your Project**
 
-Inside the repository, create a new folder for your project.
+   Inside the repository, create a new folder for your project.
 
-### Create the Source File
+2. **Create the Source File**
 
-Inside the folder, create a file named `check_gsf.c`.
+   Inside the folder, create a file named `check_gsf.c`.
 
-Copy and paste the provided C code into `check_gsf.c`.
+   Copy and paste the provided C code into `check_gsf.c`.
 
-### Compile the Code
-## Run the Program
+3. **Compile the Code**
+   ```bash
+   gcc -o check_gsf check_gsf.c -lgsf
+   ```
 
-Execute the compiled program with the path to the folder containing `.gsf` files:
-```bash
-./check_gsf.exe C:\path\to\gsf\folder
-Open the Terminal in VS Code (`Ctrl + ~`).
+4. **Run the Program**
 
-Run the following command:
-```bash
-gcc -o check_gsf check_gsf.c -lgsf
+   Execute the compiled program with the path to the folder containing `.gsf` files:
+   ```bash
+   ./check_gsf.exe C:\path\to\gsf\folder
+   ```
+
+   Open the Terminal in VS Code (`Ctrl + ~`).
+
 ## Example Log File Output
 
 The program will generate a log file named `gsf_backscatter_log.txt` in the `text` folder. The log file will contain entries for each `.gsf` file that does not contain backscatter data, along with a summary of the total files checked and the count of files missing backscatter data.
