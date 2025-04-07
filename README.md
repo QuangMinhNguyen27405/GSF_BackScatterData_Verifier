@@ -1,4 +1,4 @@
-# Backscatter Data Checker
+# Backscatter Data 
 
 This repository contains a program written in C that scans `.gsf` (Generic Sensor Format) files within a specified folder, checks if they contain backscatter data, and logs the results in a text file.
 
