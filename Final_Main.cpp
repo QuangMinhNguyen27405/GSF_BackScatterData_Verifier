@@ -3,119 +3,118 @@
 #include <string.h>
 #include <dirent.h>
 #include <sys/stat.h>
-#include <sys/types.h>
+#include <unistd.h>
 #include "gsf.h"
 
-// Ensure 'text' folder exists
-void create_text_folder() {
-    struct stat st = {0};
-    if (stat("text", &st) == -1) {
-        #ifdef _WIN32
-            mkdir("text");  // Windows
-        #else
-            mkdir("text", 0700);  // Unix/Linux
-        #endif
-    }
-}
-
-// Function to process a single GSF file and save output
-void process_gsf_file(const char *file_path) {
+void check_for_backscatter(const char* file_path, FILE *report_file, int* files_with_backscatter, int* files_missing_backscatter) {
     int handle;
     gsfDataID id;
     gsfRecords rec;
+    int has_backscatter = 0;
 
-    // Extract filename from the path
-    const char *filename = strrchr(file_path, '/');
-    if (!filename) filename = strrchr(file_path, '\\');
-    if (!filename) filename = file_path;
-    else filename++;
-
-    // Create output file path
-    char output_path[1024];
-    snprintf(output_path, sizeof(output_path), "text/%s.txt", filename);
-
-    FILE *output_file = fopen(output_path, "w");
-    if (!output_file) {
-        printf("Failed to create output file: %s\n", output_path);
-        return;
-    }
-
+    // Open the GSF file
     if (gsfOpen(file_path, GSF_READONLY, &handle) == 0) {
-        fprintf(output_file, "Processing: %s\n", file_path);
+        printf("Checking GSF file: %s\n", file_path);
+
         while (gsfRead(handle, GSF_NEXT_RECORD, &id, &rec, NULL, 0) > 0) {
             if (id.recordID == GSF_RECORD_SWATH_BATHYMETRY_PING) {
                 gsfSwathBathyPing *ping = &rec.mb_ping;
 
                 if (ping->brb_inten) {
-                    fprintf(output_file, "[BRB_INTENSITY] - File: %s\n", file_path);
-                    fprintf(output_file, "  Bits per sample     : %d\n", ping->brb_inten->bits_per_sample);
-                    fprintf(output_file, "  Applied corrections : 0x%08X\n", ping->brb_inten->applied_corrections);
-
-                    int beams = ping->number_beams;
-                    for (int i = 0; i < beams; i++) {
-                        gsfTimeSeriesIntensity *ts = &ping->brb_inten->time_series[i];
-                        fprintf(output_file, "  Beam %d:\n", i);
-                        fprintf(output_file, "    Sample count        : %d\n", ts->sample_count);
-                        fprintf(output_file, "    Detect sample index : %d\n", ts->detect_sample);
-                        fprintf(output_file, "    Start range sample  : %d\n", ts->start_range_samples);
-
-                        for (int j = 0; j < ts->sample_count && j < 10; j++) {
-                            fprintf(output_file, "      Sample[%d] = %u\n", j, ts->samples[j]);
-                        }
-                    }
-                    break;  // Stop after first ping with backscatter
+                    has_backscatter = 1;
+                    (*files_with_backscatter)++;
+                    break;  // Stop once backscatter is found
                 }
             }
         }
+
+        if (!has_backscatter) {
+            (*files_missing_backscatter)++;
+            fprintf(report_file, "Missing backscatter data: %s\n", file_path);
+        }
+
         gsfClose(handle);
     } else {
-        fprintf(output_file, "Failed to open GSF file: %s\n", file_path);
+        printf("Failed to open GSF file: %s\n", file_path);
     }
-
-    fclose(output_file);
 }
 
-// Function to iterate over GSF files in the folder
-void process_gsf_folder(const char *folder_path) {
-    struct dirent *entry;
-    DIR *dp = opendir(folder_path);
-
-    if (dp == NULL) {
-        perror("Failed to open folder");
+void process_files_in_directory(const char* directory_path, FILE *report_file, int* files_with_backscatter, int* files_missing_backscatter) {
+    DIR *dir = opendir(directory_path);
+    if (dir == NULL) {
+        printf("Failed to open directory: %s\n", directory_path);
         return;
     }
 
-    create_text_folder(); // Ensure "text" directory exists before processing
+    struct dirent *entry;
+    struct stat file_stat;
 
-    while ((entry = readdir(dp)) != NULL) {
-        // Skip "." and ".." entries
-        if (strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0) {
+    while ((entry = readdir(dir)) != NULL) {
+        // Skip current and parent directory
+        if (entry->d_name[0] == '.' && (entry->d_name[1] == '\0' || (entry->d_name[1] == '.' && entry->d_name[2] == '\0'))) {
             continue;
         }
 
-        char file_path[1024];
-        snprintf(file_path, sizeof(file_path), "%s/%s", folder_path, entry->d_name);
+        // Build full file path
+        char file_path[512];
+        snprintf(file_path, sizeof(file_path), "%s/%s", directory_path, entry->d_name);
 
-        struct stat path_stat;
-        stat(file_path, &path_stat);
-
-        if (S_ISREG(path_stat.st_mode)) {  // Only process regular files
-            if (strstr(entry->d_name, ".gsf") != NULL) {
-                process_gsf_file(file_path);
+        // Check if it's a regular file using stat()
+        if (stat(file_path, &file_stat) == 0 && S_ISREG(file_stat.st_mode)) {
+            // Check if file has .gsf extension
+            const char* ext = strrchr(entry->d_name, '.');
+            if (ext && strcmp(ext, ".gsf") == 0) {
+                // Check if backscatter data is present in the GSF file
+                check_for_backscatter(file_path, report_file, files_with_backscatter, files_missing_backscatter);
             }
         }
     }
-    closedir(dp);
+
+    closedir(dir);
 }
 
-int main(int argc, char *argv[]) {
-    if (argc != 2) {
-        printf("Usage: %s <folder_path>\n", argv[0]);
+void generate_report(const char* input_directory, const char* output_directory) {
+    char report_file_path[512];
+    
+    // Safely concatenate the output directory path with the report filename
+    snprintf(report_file_path, sizeof(report_file_path), "%s/gsf_backscatter_report.txt", output_directory);
+
+    FILE *report_file = fopen(report_file_path, "w");
+    if (report_file == NULL) {
+        printf("Failed to open report file for writing.\n");
+        return;
+    }
+
+    int files_with_backscatter = 0;
+    int files_missing_backscatter = 0;
+
+    fprintf(report_file, "GSF Backscatter Data Report\n\n");
+    fprintf(report_file, "Checking GSF files in directory: %s\n\n", input_directory);
+
+    // Process all files in the directory
+    process_files_in_directory(input_directory, report_file, &files_with_backscatter, &files_missing_backscatter);
+
+    printf(input_directory);
+
+    fprintf(report_file, "\nSummary:\n\n");
+    fprintf(report_file, "Total GSF files checked: %d\n", files_with_backscatter + files_missing_backscatter);
+    fprintf(report_file, "Files with backscatter: %d\n", files_with_backscatter);
+    fprintf(report_file, "Files missing backscatter: %d\n", files_missing_backscatter);
+
+    fclose(report_file);
+}
+
+int main(int argc, char* argv[]) {
+    if (argc < 2) {
+        printf("Usage: %s <input_directory>\n", argv[0]);
         return 1;
     }
 
-    const char *folder_path = argv[1];
-    process_gsf_folder(folder_path);
+    const char* input_directory = argv[1];
+    const char* output_directory = argv[2];
+
+    // Generate the report
+    generate_report(input_directory, output_directory);
 
     return 0;
 }
