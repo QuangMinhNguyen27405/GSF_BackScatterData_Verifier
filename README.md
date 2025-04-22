@@ -2,7 +2,26 @@
 
 This repository contains a program written in C that scans `.gsf` (Generic Sensor Format) files within a specified folder, checks if they contain backscatter data, and logs the results in a text file.
 
-## Requirements
+
+## 🚀 Quick Start
+
+### 🗂 Download & Run
+
+1. Click on the **Code** dropdown on the [repository page](https://github.com/FREAC/GSF_BackScatterData_Verifier).
+2. Download the `.zip` file and extract it.
+3. Run the verifier on **Windows**:
+
+```bash
+check_gsf.exe "C:\path\to\gsf\folder" "C:\path\to\output\folder"
+```
+
+### Example Log File Output
+
+The program will generate a log file named `gsf_backscatter_log.txt` to the "C:\path\to\output\folder" folder. The log file will contain entries for each `.gsf` file that does and does not contain backscatter data, along with a summary of the total files checked and the count of files missing backscatter data.
+
+## 🛠 Development Setup
+
+### 🔧 Requirements
 
 ### For Windows
 
@@ -21,7 +40,7 @@ This repository contains a program written in C that scans `.gsf` (Generic Senso
    - Install the C/C++ extension (`ms-vscode.cpptools`).
    - Install the Code Runner extension (optional).
 
-## Setup
+## 🧱 Build From Source
 
 1. **Clone the Repository**
    ```bash
@@ -33,9 +52,7 @@ This repository contains a program written in C that scans `.gsf` (Generic Senso
 
    Open the repository folder in VS Code.
 
-## Usage
-
-1. **Compile the Code**
+3. **Compile the Code**
    
 #### 🪟 On Windows:
 Use the provided `build.bat` script:
@@ -53,15 +70,11 @@ make
 
    Execute the compiled program with the path to the folder containing `.gsf` files:
    ```bash
-   ./check_gsf.exe "C:\path\to\gsf\folder" "C:\path\to\ouput\folder" 
+   ./check_gsf.exe "C:\path\to\gsf\folder" "C:\path\to\output\folder" 
    ```
 
    Open the Terminal in VS Code (`Ctrl + ~`).
 
-## Example Log File Output
-
-The program will generate a log file named `gsf_backscatter_log.txt` to the "C:\path\to\output\folder" folder. The log file will contain entries for each `.gsf` file that does and does not contain backscatter data, along with a summary of the total files checked and the count of files missing backscatter data.
-
 ## Contributing
 
-Feel free to contribute to this repository by submitting pull requests or opening issues.
+We welcome contributions! Feel free to open issues or submit pull requests to enhance functionality, documentation, or bug fixes.
