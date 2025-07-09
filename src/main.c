@@ -6,7 +6,36 @@
 #include <unistd.h>
 #include "gsf/gsf.h"
 
-void check_for_backscatter(const char* file_path, FILE *report_file, int* files_with_backscatter, int* files_missing_backscatter, char files_with_backscatter_list[1000][512], char files_missing_backscatter_list[1000][512]) {
+#define MAX_LINES 1000000
+
+
+void add_to_list(char ***list, int *count, int *capacity, const char *path) {
+    if (*count >= *capacity) {
+        *capacity = (*capacity == 0) ? 100 : (*capacity * 2); // Start with 100, then double
+        *list = realloc(*list, (*capacity) * sizeof(char *));
+        if (*list == NULL) {
+            perror("realloc failed");
+            exit(EXIT_FAILURE);
+        }
+    }
+    (*list)[*count] = strdup(path);
+    if ((*list)[*count] == NULL) {
+        perror("strdup failed");
+        exit(EXIT_FAILURE);
+    }
+    (*count)++;
+}
+
+void check_for_backscatter(
+    const char* file_path,
+    FILE *report_file,
+    int* files_with_backscatter,
+    int* files_missing_backscatter,
+    char ***files_with_backscatter_list,
+    char ***files_missing_backscatter_list,
+    int *with_capacity,
+    int *missing_capacity
+) {
     int handle;
     gsfDataID id;
     gsfRecords rec;
@@ -27,12 +56,11 @@ void check_for_backscatter(const char* file_path, FILE *report_file, int* files_
 
         // Add file to appropriate list
         if (has_backscatter) {
-            (*files_with_backscatter)++;
-            snprintf(files_with_backscatter_list[*files_with_backscatter - 1], 512, "%s", file_path);
+            add_to_list(files_with_backscatter_list, files_with_backscatter, with_capacity, file_path);
         } else {
-            (*files_missing_backscatter)++;
-            snprintf(files_missing_backscatter_list[*files_missing_backscatter - 1], 512, "%s", file_path);
+            add_to_list(files_missing_backscatter_list, files_missing_backscatter, missing_capacity, file_path);
         }
+
 
         gsfClose(handle);
     } else {
@@ -40,7 +68,16 @@ void check_for_backscatter(const char* file_path, FILE *report_file, int* files_
     }
 }
 
-void process_files_in_directory(const char* directory_path, FILE *report_file, int* files_with_backscatter, int* files_missing_backscatter, char files_with_backscatter_list[1000][512], char files_missing_backscatter_list[1000][512]) {
+void process_files_in_directory(
+    const char* directory_path,
+    FILE *report_file,
+    int* files_with_backscatter,
+    int* files_missing_backscatter,
+    char ***files_with_backscatter_list,
+    char ***files_missing_backscatter_list,
+    int *with_capacity,
+    int *missing_capacity
+) {
     DIR *dir = opendir(directory_path);
     if (dir == NULL) {
         printf("Failed to open directory: %s\n", directory_path);
@@ -67,12 +104,21 @@ void process_files_in_directory(const char* directory_path, FILE *report_file, i
 
         if (S_ISDIR(file_stat.st_mode)) {
             // Recurse into subdirectory
-            process_files_in_directory(path, report_file, files_with_backscatter, files_missing_backscatter, files_with_backscatter_list, files_missing_backscatter_list);
+            process_files_in_directory(
+                path,
+                report_file,
+                files_with_backscatter,
+                files_missing_backscatter,
+                files_with_backscatter_list,
+                files_missing_backscatter_list,
+                with_capacity,
+                missing_capacity
+            );
         } else if (S_ISREG(file_stat.st_mode)) {
             // Check if file has .gsf extension
             const char* ext = strrchr(entry->d_name, '.');
             if (ext && strcmp(ext, ".gsf") == 0) {
-                check_for_backscatter(path, report_file, files_with_backscatter, files_missing_backscatter, files_with_backscatter_list, files_missing_backscatter_list);
+                check_for_backscatter(path, report_file, files_with_backscatter, files_missing_backscatter, files_with_backscatter_list, files_missing_backscatter_list, with_capacity, missing_capacity);            
             }
         }
     }
@@ -93,16 +139,18 @@ void generate_report(const char* input_directory, const char* output_directory) 
         return;
     }
 
+    char **files_with_backscatter_list = NULL;
+    char **files_missing_backscatter_list = NULL;
     int files_with_backscatter = 0;
     int files_missing_backscatter = 0;
-    char files_with_backscatter_list[1000][512];
-    char files_missing_backscatter_list[1000][512];
+    int with_capacity = 0;
+    int missing_capacity = 0;
 
     fprintf(report_file, "GSF Backscatter Data Report\n\n");
     fprintf(report_file, "Checking GSF files in directory: %s\n\n", input_directory);
 
     // Process all files in the directory
-    process_files_in_directory(input_directory, report_file, &files_with_backscatter, &files_missing_backscatter, files_with_backscatter_list, files_missing_backscatter_list);
+    process_files_in_directory(input_directory, report_file, &files_with_backscatter, &files_missing_backscatter, &files_with_backscatter_list, &files_missing_backscatter_list, &with_capacity, &missing_capacity);
 
     // Write summary
     fprintf(report_file, "\nSummary:\n");
@@ -123,6 +171,12 @@ void generate_report(const char* input_directory, const char* output_directory) 
     }
 
     fclose(report_file);
+
+    for (int i = 0; i < files_with_backscatter; i++) free(files_with_backscatter_list[i]);
+    free(files_with_backscatter_list);
+
+    for (int i = 0; i < files_missing_backscatter; i++) free(files_missing_backscatter_list[i]);
+    free(files_missing_backscatter_list);
 }
 
 int main(int argc, char* argv[]) {
