@@ -52,27 +52,34 @@ void process_files_in_directory(const char* directory_path, FILE *report_file, i
 
     while ((entry = readdir(dir)) != NULL) {
         // Skip current and parent directory
-        if (entry->d_name[0] == '.' && (entry->d_name[1] == '\0' || (entry->d_name[1] == '.' && entry->d_name[2] == '\0'))) {
+        if (strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0) {
             continue;
         }
 
-        // Build full file path
-        char file_path[512];
-        snprintf(file_path, sizeof(file_path), "%s/%s", directory_path, entry->d_name);
+        // Build full path
+        char path[512];
+        snprintf(path, sizeof(path), "%s/%s", directory_path, entry->d_name);
 
-        // Check if it's a regular file using stat()
-        if (stat(file_path, &file_stat) == 0 && S_ISREG(file_stat.st_mode)) {
+        // Get file status
+        if (stat(path, &file_stat) != 0) {
+            continue; // Failed to get status, skip
+        }
+
+        if (S_ISDIR(file_stat.st_mode)) {
+            // Recurse into subdirectory
+            process_files_in_directory(path, report_file, files_with_backscatter, files_missing_backscatter, files_with_backscatter_list, files_missing_backscatter_list);
+        } else if (S_ISREG(file_stat.st_mode)) {
             // Check if file has .gsf extension
             const char* ext = strrchr(entry->d_name, '.');
             if (ext && strcmp(ext, ".gsf") == 0) {
-                // Check if backscatter data is present in the GSF file
-                check_for_backscatter(file_path, report_file, files_with_backscatter, files_missing_backscatter, files_with_backscatter_list, files_missing_backscatter_list);
+                check_for_backscatter(path, report_file, files_with_backscatter, files_missing_backscatter, files_with_backscatter_list, files_missing_backscatter_list);
             }
         }
     }
 
     closedir(dir);
 }
+
 
 void generate_report(const char* input_directory, const char* output_directory) {
     char report_file_path[512];
@@ -97,6 +104,12 @@ void generate_report(const char* input_directory, const char* output_directory) 
     // Process all files in the directory
     process_files_in_directory(input_directory, report_file, &files_with_backscatter, &files_missing_backscatter, files_with_backscatter_list, files_missing_backscatter_list);
 
+    // Write summary
+    fprintf(report_file, "\nSummary:\n");
+    fprintf(report_file, "Total GSF files checked: %d\n", files_with_backscatter + files_missing_backscatter);
+    fprintf(report_file, "Files with backscatter: %d\n", files_with_backscatter);
+    fprintf(report_file, "Files missing backscatter: %d\n", files_missing_backscatter);
+
     // Write list of files with backscatter data
     fprintf(report_file, "Files with backscatter data:\n");
     for (int i = 0; i < files_with_backscatter; i++) {
@@ -108,12 +121,6 @@ void generate_report(const char* input_directory, const char* output_directory) 
     for (int i = 0; i < files_missing_backscatter; i++) {
         fprintf(report_file, "  %s\n", files_missing_backscatter_list[i]);
     }
-
-    // Write summary
-    fprintf(report_file, "\nSummary:\n");
-    fprintf(report_file, "Total GSF files checked: %d\n", files_with_backscatter + files_missing_backscatter);
-    fprintf(report_file, "Files with backscatter: %d\n", files_with_backscatter);
-    fprintf(report_file, "Files missing backscatter: %d\n", files_missing_backscatter);
 
     fclose(report_file);
 }
