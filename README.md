@@ -2,7 +2,26 @@
 
 This repository contains a program written in C that scans `.gsf` (Generic Sensor Format) files within a specified folder, checks if they contain backscatter data, and logs the results in a text file.
 
-## Requirements
+
+## 🚀 Quick Start
+
+### 🗂 Download & Run
+
+1. Click on the **Code** dropdown on the [repository page](https://github.com/FREAC/GSF_BackScatterData_Verifier).
+2. Download the `.zip` file and extract it.
+3. Run the verifier on **Windows**:
+
+```bash
+check_gsf.exe "C:\path\to\gsf\folder" "C:\path\to\output\folder"
+```
+
+### Example Log File Output
+
+The program will generate a log file named `gsf_backscatter_log.txt` to the "C:\path\to\output\folder" folder. The log file will contain entries for each `.gsf` file that does and does not contain backscatter data, along with a summary of the total files checked and the count of files missing backscatter data.
+
+## 🛠 Development Setup
+
+### 🔧 Requirements
 
 ### For Windows
 
@@ -21,52 +40,41 @@ This repository contains a program written in C that scans `.gsf` (Generic Senso
    - Install the C/C++ extension (`ms-vscode.cpptools`).
    - Install the Code Runner extension (optional).
 
-## Setup
+## 🧱 Build From Source
 
 1. **Clone the Repository**
    ```bash
    git clone https://github.com/FREAC/GSF_BackScatterData_Verifier.git
-   cd GSF_BackScatterData_Verifier
+   cd GSF_BackScatterData_Verifier/src
    ```
 
-2. **Install Dependencies**
-
-   Follow the instructions in the [Requirements](#requirements) section.
-
-3. **Open in VS Code**
+2. **Open in VS Code**
 
    Open the repository folder in VS Code.
 
-## Usage
-
-1. **Create a New Folder for Your Project**
-
-   Inside the repository, create a new folder for your project.
-
-2. **Create the Source File**
-
-   Inside the folder, create a file named `check_gsf.c`.
-
-   Copy and paste the provided C code into `check_gsf.c`.
-
 3. **Compile the Code**
-   ```bash
-   gcc -o check_gsf check_gsf.c -lgsf
-   ```
+   
+#### 🪟 On Windows:
+Use the provided `build.bat` script:
+```bash
+./build.bat
+```
+
+#### 🐧 On Linux/macOS:
+Use the provided makefile:
+```bash
+make
+```
 
 4. **Run the Program**
 
    Execute the compiled program with the path to the folder containing `.gsf` files:
    ```bash
-   ./check_gsf.exe C:\path\to\gsf\folder
+   ./check_gsf.exe "C:\path\to\gsf\folder" "C:\path\to\output\folder" 
    ```
 
    Open the Terminal in VS Code (`Ctrl + ~`).
 
-## Example Log File Output
-
-The program will generate a log file named `gsf_backscatter_log.txt` in the `text` folder. The log file will contain entries for each `.gsf` file that does not contain backscatter data, along with a summary of the total files checked and the count of files missing backscatter data.
-
 ## Contributing
 
-Feel free to contribute to this repository by submitting pull requests or opening issues.
+We welcome contributions! Feel free to open issues or submit pull requests to enhance functionality, documentation, or bug fixes.
